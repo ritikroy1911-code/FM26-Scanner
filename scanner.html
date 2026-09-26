@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Fresher Meet-Up 2026 - Ticket Scanner</title>
+
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: white;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      margin-bottom: 5px;
+    }
+
+    .subtitle {
+      color: #bbb;
+      margin-bottom: 20px;
+    }
+
+    #reader {
+      width: 100%;
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    #result {
+      max-width: 600px;
+      margin: 20px auto;
+      padding: 25px;
+      border-radius: 12px;
+      background: #222;
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .valid {
+      background: #087f23 !important;
+    }
+
+    .used {
+      background: #b00020 !important;
+    }
+
+    .invalid {
+      background: #8a5200 !important;
+    }
+
+    .error {
+      background: #555 !important;
+    }
+
+    .ticket-info {
+      font-size: 18px;
+      margin-top: 10px;
+      font-weight: normal;
+    }
+
+    input {
+      width: 80%;
+      max-width: 450px;
+      padding: 12px;
+      margin-top: 15px;
+      border-radius: 6px;
+      border: none;
+      font-size: 16px;
+    }
+
+    button {
+      padding: 12px 20px;
+      margin: 10px;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>🎟️ FRESHER MEET-UP 2026</h1>
+  <div class="subtitle">Official Ticket Verification</div>
+
+  <div id="reader"></div>
+
+  <div id="result">
+    READY — Scan a ticket
+  </div>
+
+  <input
+    type="text"
+    id="manualQR"
+    placeholder="Manual QR payload test"
+  >
+
+  <br>
+
+  <button onclick="manualVerify()">
+    Verify Manually
+  </button>
+
+
+<script>
+
+  // =====================================================
+  // YOUR APPS SCRIPT WEB APP URL
+  // =====================================================
+
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz_PNfyXZrM8uH1OEnXqcQxoYoNfiJtRKCkTA-718fmjhV7HpFkvHxi91VQDmFJ-LSZ/exec";
+
+
+  // =====================================================
+  // SCANNER KEY
+  // =====================================================
+
+  const SCANNER_KEY = "FM26-SCANNER-2026-839274";
+
+
+  let checking = false;
+
+
+  // =====================================================
+  // SHOW RESULT
+  // =====================================================
+
+  function showResult(data) {
+
+    const result = document.getElementById("result");
+
+    result.className = "";
+
+    if (data.status === "VALID") {
+
+      result.classList.add("valid");
+
+      result.innerHTML =
+        "✅ VALID TICKET" +
+        '<div class="ticket-info">' +
+        "Ticket ID: " + escapeHtml(data.ticketID) +
+        "<br>Ticket No: " + escapeHtml(data.ticketNo) +
+        "</div>";
+
+    }
+
+    else if (data.status === "ALREADY_USED") {
+
+      result.classList.add("used");
+
+      result.innerHTML =
+        "🚫 ALREADY USED" +
+        '<div class="ticket-info">' +
+        "Ticket ID: " + escapeHtml(data.ticketID) +
+        "<br>Ticket No: " + escapeHtml(data.ticketNo) +
+        "</div>";
+
+    }
+
+    else if (data.status === "INVALID") {
+
+      result.classList.add("invalid");
+
+      result.innerHTML =
+        "❌ INVALID TICKET";
+
+    }
+
+    else if (data.status === "BLOCKED") {
+
+      result.classList.add("used");
+
+      result.innerHTML =
+        "🚫 TICKET BLOCKED";
+
+    }
+
+    else {
+
+      result.classList.add("error");
+
+      result.innerHTML =
+        "⚠️ " + escapeHtml(data.message || "ERROR");
+
+    }
+  }
+
+
+  // =====================================================
+  // VERIFY QR
+  // =====================================================
+
+  function verifyQR(qrText) {
+
+    if (checking) {
+      return;
+    }
+
+    qrText = String(qrText || "").trim();
+
+    if (!qrText) {
+      return;
+    }
+
+    checking = true;
+
+    document.getElementById("result").className = "";
+
+    document.getElementById("result").innerHTML =
+      "⏳ CHECKING TICKET...";
+
+
+    const script = document.createElement("script");
+
+    script.src =
+      WEB_APP_URL +
+      "?key=" + encodeURIComponent(SCANNER_KEY) +
+      "&qr=" + encodeURIComponent(qrText) +
+      "&callback=handleTicketResult" +
+      "&t=" + Date.now();
+
+
+    script.onerror = function() {
+
+      document.getElementById("result").className = "error";
+
+      document.getElementById("result").innerHTML =
+        "⚠️ CONNECTION ERROR";
+
+      checking = false;
+    };
+
+
+    document.body.appendChild(script);
+
+
+    setTimeout(function() {
+
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
+
+    }, 10000);
+  }
+
+
+  // =====================================================
+  // RESPONSE FROM GOOGLE APPS SCRIPT
+  // =====================================================
+
+  function handleTicketResult(data) {
+
+    showResult(data);
+
+    setTimeout(function() {
+      checking = false;
+    }, 1500);
+  }
+
+
+  // =====================================================
+  // CAMERA SCANNER
+  // =====================================================
+
+  function onScanSuccess(decodedText) {
+
+  let qrPayload = decodedText;
+
+  try {
+    const url = new URL(decodedText);
+
+    if (url.searchParams.has("q")) {
+      qrPayload = url.searchParams.get("q");
+    }
+
+  } catch (e) {
+    // If it is already a normal QR payload, keep it as-is.
+  }
+
+  qrPayload = String(qrPayload || "").trim();
+
+  console.log("RAW SCAN:", decodedText);
+  console.log("QR PAYLOAD:", qrPayload);
+
+  verifyQR(qrPayload);
+}
+
+
+  function onScanFailure(error) {
+
+    // Ignore normal scanning failures.
+  }
+
+
+  const scanner = new Html5QrcodeScanner(
+    "reader",
+    {
+      fps: 10,
+      qrbox: {
+        width: 300,
+        height: 300
+      },
+      rememberLastUsedCamera: true
+    },
+    false
+  );
+
+
+  scanner.render(
+    onScanSuccess,
+    onScanFailure
+  );
+
+
+  // =====================================================
+  // MANUAL TEST
+  // =====================================================
+
+  function manualVerify() {
+
+    const value =
+      document.getElementById("manualQR").value.trim();
+
+    if (!value) {
+      alert("Enter QR payload first.");
+      return;
+    }
+
+    verifyQR(value);
+  }
+
+
+  // =====================================================
+  // SECURITY: DISPLAY TEXT SAFELY
+  // =====================================================
+
+  function escapeHtml(value) {
+
+    return String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+</script>
+
+</body>
+</html>
